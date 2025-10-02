@@ -1,0 +1,18 @@
+### Schema includes ###########################################################
+include                 /etc/openldap/schema/core.schema
+include                 /etc/openldap/schema/cosine.schema
+include                 /etc/openldap/schema/inetorgperson.schema
+include                 /etc/openldap/schema/misc.schema
+include                 /etc/openldap/schema/nis.schema
+
+## Module paths ##############################################################
+moduleload              back_ldap
+database                ldap
+readonly                yes
+protocol-version        3
+rebind-as-user
+
+suffix                  "{{ ldapproxy_suffix }}"
+uri                     "ldaps://{{ ldapproxy_server }}:636"
+TLSCertificateFile      "/etc/openldap/{{ ldapproxy_tls_hostname }}.crt"
+TLSCertificateKeyFile   "/etc/openldap/{{ ldapproxy_tls_hostname }}.key"

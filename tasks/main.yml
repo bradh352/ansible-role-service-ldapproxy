@@ -1,0 +1,139 @@
+---
+- name: "APT: Install dependencies"
+  ansible.builtin.apt:
+    pkg:
+      - "ldap-utils"
+      - "slapd"
+      - "python3-certbot"
+      - "python3-certbot-nginx"
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: "DNF: Install dependencies"
+  ansible.builtin.dnf:
+    name:
+      - "openldap"
+      - "openldap-clients"
+      - "openldap-servers"
+      - "python3-certbot"
+      - "python3-certbot-nginx"
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: "APT: Install certbot cloudflare provider"
+  ansible.builtin.apt:
+    pkg:
+      - "python3-certbot-dns-cloudflare"
+    state: present
+  when: ansible_os_family == 'Debian' and ldapproxy_dns_provider == 'cloudflare'
+
+- name: "DNF: Install certbot cloudflare provider"
+  ansible.builtin.dnf:
+    name:
+      - "python3-certbot-dns-cloudflare"
+    state: present
+  when: ansible_os_family == 'RedHat' and ldapproxy_dns_provider == 'cloudflare'
+
+- name: "Install configuration"
+  template:
+    src: slapd.conf.j2
+    dest: /etc/openldap/slapd.conf
+    owner: ldap
+    group: ldap
+    mode: "644"
+  notify: restart_ldap
+
+- name: "Delete /etc/openldap/slapd.d directory as it prevents slapd.conf from being read"
+  ansible.builtin.file:
+    path: /etc/openldap/slapd.d
+    state: absent
+
+- name: "Install slapd rsyslog configuration"
+  copy:
+    content: "local4.* /var/log/slapd"
+    dest: "/etc/rsyslog.d/slapd.conf"
+    owner: root
+    mode: "644"
+  notify: "restart_rsyslog"
+
+- name: "UFW: enable ldap"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  with_items:
+    - 389
+    - 636
+  when: ansible_os_family == 'Debian'
+
+- name: "FirewallD: enable ldap"
+  firewalld:
+    immediate: yes
+    permanent: yes
+    port: "{{ item }}/tcp"
+    state: enabled
+  with_items:
+    - 389
+    - 636
+  when: ansible_os_family == 'RedHat'
+
+- name: "Set service name"
+  set_fact:
+    ldap_service_name: "slapd"
+
+- name: "TLS deployment script for slapd"
+  copy:
+    src: slapd-deploy-tls.sh
+    dest: /usr/local/bin/slapd-deploy-tls.sh
+    owner: root
+    mode: "755"
+
+- name: "CertBot: save cloudflare credentials"
+  copy:
+    dest: /etc/letsencrypt/cloudflare.ini
+    content: "dns_cloudflare_api_token = '{{ ldapproxy_dns_apikey }}'"
+    owner: root
+    mode: "600"
+  when: ldapproxy_dns_provider == "cloudflare"
+
+- name: "CertBot: save godaddy credentials"
+  copy:
+    dest: /etc/letsencrypt/godaddy.ini
+    content: 'dns_godaddy_api_token="{{ ldapproxy_dns_apikey }}"'
+    owner: root
+    mode: "600"
+  when: ldapproxy_dns_provider == "godaddy"
+
+- name: "CertBot: Godaddy: Install Scripts"
+  copy:
+    dest: "/usr/local/bin/{{ item }}"
+    src: "{{ item }}"
+    mode: "755"
+    owner: root
+  with_items:
+    - "godaddydnsauth.sh"
+    - "godaddydnsauthclean.sh"
+  when: ldapproxy_dns_provider == "godaddy"
+
+- name: "CertBot: Detect if we need to run"
+  shell: certbot certificates -d {{ inventory_hostname }}
+  register: certbot
+  changed_when: ('VALID' not in certbot.stdout)
+  failed_when: false
+
+- name: "CertBot: Cloudflare: get certificate"
+  shell: "certbot certonly --dns-cloudflare --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini -d {{ ldapproxy_tls_hostname }} --agree-tos -n -m {{ ldapproxy_dns_email }} --deploy-hook '/usr/local/bin/slapd-deploy-tls.sh {{ ldapproxy_tls_hostname }}'"
+  when: ldapproxy_dns_provider == "cloudflare" and "VALID" not in certbot.stdout
+  throttle: 1
+
+- name: "CertBot: Godaddy: get certificate"
+  shell: "certbot certonly --manual --preferred-challenges=dns --manual-auth-hook /usr/local/bin/godaddydnsauth.sh --manual-cleanup-hook /usr/local/bin/godaddydnsauthclean.sh -d {{ ldapproxy_tls_hostname }} --agree-tos -n -m {{ ldapproxy_dns_email }} --deploy-hook '/usr/local/bin/slapd-deploy-tls.sh {{ ldapproxy_tls_hostname }}'"
+  when: ldapproxy_dns_provider == "godaddy" and "VALID" not in certbot.stdout
+  throttle: 1
+
+
+- name: "Enable ldap server"
+  service:
+    name: "{{ ldap_service_name }}"
+    state: started
+    enabled: yes

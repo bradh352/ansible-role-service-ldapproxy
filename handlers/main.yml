@@ -1,0 +1,10 @@
+---
+- name: "restart_ldap"
+  service:
+    name: "{{ ldap_service_name }}"
+    state: restarted
+
+- name: "restart_rsyslog"
+  service:
+    name: "rsyslog"
+    state: restarted
