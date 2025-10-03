@@ -14,5 +14,5 @@ rebind-as-user
 
 suffix                  "{{ ldapproxy_suffix }}"
 uri                     "ldaps://{{ ldapproxy_server }}:636"
-TLSCertificateFile      "/etc/openldap/{{ ldapproxy_tls_hostname }}.crt"
-TLSCertificateKeyFile   "/etc/openldap/{{ ldapproxy_tls_hostname }}.key"
+TLSCertificateFile      "{{ ldapproxy_tlscert }}"
+TLSCertificateKeyFile   "{{ ldapproxy_tlskey }}"

@@ -20,14 +20,5 @@ possible data exfiltration attacks.
 - `ldapproxy_binddn`: Required. Bind DN for requesting users/groups.
 - `ldapproxy_bindpass`: Required. Bind DN's password for requesting
   users/groups.
-- `ldapproxy_tls_hostname`: Hostname to use for TLS certificates, this may be
-  provided via a virtual ip. Defaults to `inventory_hostname` if not specified.
-- `ldapproxy_dns_email`: Required. Used for certbot to specify email to provider.
-- `ldapproxy_dns_provider`: Required. DNS provider in use for performing the DNS-01
-  challenge.  Valid values are currently: `godaddy`, `cloudflare`
-- `ldapproxy_dns_apikey`: Required. API Key for the DNS provider to be able to create
-  a TXT record for `_acme-challenge.{{ inventory_hostname }}`.  This API should
-  be restricted to exactly that access and nothing more.  Use `Key:Secret` for
-  Godaddy keys. For GoDaddy see some information here:
-  https://community.letsencrypt.org/t/godaddy-dns-and-certbot-dns-challenge-scripts/210189
-
+- `ldapproxy_tlscert`: Required. Path to tls certificate.
+- `ldapproxy_tlskey`: Required. Path to tls private key.
