@@ -17,14 +17,14 @@
   when: ansible_os_family == 'RedHat'
 
 - name: "Set proper permisions on directory"
-  file:
+  ansible.builtin.file:
     path: /etc/openldap
     owner: root
     mode: "755"
     state: directory
 
 - name: "Set proper permisions certificates"
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     owner: ldap
     mode: "600"
@@ -33,7 +33,7 @@
     - "{{ ldapproxy_tlskey }}"
 
 - name: "Install configuration"
-  template:
+  ansible.builtin.template:
     src: slapd.conf.j2
     dest: /etc/openldap/slapd.conf
     owner: ldap
@@ -47,7 +47,7 @@
     state: absent
 
 - name: "Install slapd rsyslog configuration"
-  copy:
+  ansible.builtin.copy:
     content: "local4.* /var/log/slapd"
     dest: "/etc/rsyslog.d/slapd.conf"
     owner: root
@@ -65,9 +65,9 @@
   when: ansible_os_family == 'Debian'
 
 - name: "FirewallD: enable ldap"
-  firewalld:
-    immediate: yes
-    permanent: yes
+  ansible.posix.firewalld:
+    immediate: true
+    permanent: true
     port: "{{ item }}/tcp"
     state: enabled
   with_items:
@@ -76,11 +76,11 @@
   when: ansible_os_family == 'RedHat'
 
 - name: "Set service name"
-  set_fact:
+  ansible.builtin.set_fact:
     ldap_service_name: "slapd"
 
 - name: "Enable ldap server"
-  service:
+  ansible.builtin.service:
     name: "{{ ldap_service_name }}"
     state: started
-    enabled: yes
+    enabled: true

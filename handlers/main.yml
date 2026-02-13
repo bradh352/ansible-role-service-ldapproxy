@@ -1,10 +1,10 @@
 ---
 - name: "restart_ldap"
-  service:
+  ansible.builtin.service:
     name: "{{ ldap_service_name }}"
     state: restarted
 
 - name: "restart_rsyslog"
-  service:
+  ansible.builtin.service:
     name: "rsyslog"
     state: restarted
