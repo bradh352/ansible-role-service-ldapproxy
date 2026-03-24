@@ -5,7 +5,7 @@
       - "ldap-utils"
       - "slapd"
     state: present
-  when: ansible_os_family == 'Debian'
+  when: ansible_facts['os_family'] == 'Debian'
 
 - name: "DNF: Install dependencies"
   ansible.builtin.dnf:
@@ -14,7 +14,7 @@
       - "openldap-clients"
       - "openldap-servers"
     state: present
-  when: ansible_os_family == 'RedHat'
+  when: ansible_facts['os_family'] == 'RedHat'
 
 - name: "Set proper permisions on directory"
   ansible.builtin.file:
@@ -62,7 +62,7 @@
   with_items:
     - 389
     - 636
-  when: ansible_os_family == 'Debian'
+  when: ansible_facts['os_family'] == 'Debian'
 
 - name: "FirewallD: enable ldap"
   ansible.posix.firewalld:
@@ -73,7 +73,7 @@
   with_items:
     - 389
     - 636
-  when: ansible_os_family == 'RedHat'
+  when: ansible_facts['os_family'] == 'RedHat'
 
 - name: "Set service name"
   ansible.builtin.set_fact:
